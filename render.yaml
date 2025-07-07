@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: cashfree-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: APP_ID
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: WEBHOOK_SECRET
+        sync: false
+      - key: PORT
+        value: 10000 
