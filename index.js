@@ -41,14 +41,65 @@ app.post('/generate-token', async (req, res) => {
     );
 
     // Return the payment session ID to the client
-    res.json({ payment_session_id: response.data.payment_session_id });
+    res.json({
+      success: true,
+      payment_session_id: response.data.payment_session_id,
+      order_id: response.data.order_id,
+      cf_order_id: response.data.cf_order_id,
+    });
   } catch (error) {
-    console.error(error.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to generate token', details: error.response?.data || error.message });
+    console.error('Error generating token:', error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      message: error.response?.data?.message || 'Failed to generate payment token',
+    });
+  }
+});
+
+// Add a new endpoint to verify payment status
+app.get('/verify-payment/:orderId', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    
+    // Call Cashfree API to get order details
+    const response = await axios.get(
+      `https://api.cashfree.com/pg/orders/${orderId}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-version': '2022-09-01',
+          'x-client-id': APP_ID,
+          'x-client-secret': SECRET_KEY,
+        }
+      }
+    );
+    
+    // Check payment status
+    const paymentStatus = response.data.order_status;
+    const isPaymentComplete = paymentStatus === 'PAID';
+    
+    res.json({
+      success: true,
+      order_id: response.data.order_id,
+      status: paymentStatus,
+      is_paid: isPaymentComplete,
+      payment_details: {
+        amount: response.data.order_amount,
+        currency: response.data.order_currency,
+        payment_method: response.data.payment_method,
+        payment_time: response.data.order_status === 'PAID' ? response.data.order_status_update_time : null,
+      }
+    });
+  } catch (error) {
+    console.error('Error verifying payment:', error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      message: error.response?.data?.message || 'Failed to verify payment',
+    });
   }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Cashfree backend running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 }); 
